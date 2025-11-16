@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Interactive Globe</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="container">
+        <div class="stars" id="stars"></div>
+        
+        <div class="loading" id="loading">Loading 3D Globe...</div>
+        
+        <div class="controls">
+            <h2>🌍 Globe Controls</h2>
+            <div class="control-item">
+                <label>Rotation Speed:</label>
+                <input type="range" id="rotationSpeed" min="0" max="2" step="0.1" value="0.5">
+            </div>
+            <div class="control-item">
+                <label>Zoom Level:</label>
+                <input type="range" id="zoomLevel" min="1" max="5" step="0.1" value="2">
+            </div>
+            <div class="control-item">
+                <label>Auto Rotate:</label>
+                <input type="checkbox" id="autoRotate" checked>
+            </div>
+            <div class="control-item">
+                <label>Show Clouds:</label>
+                <input type="checkbox" id="showClouds" checked>
+            </div>
+            <div class="control-item">
+                <label>Show Labels:</label>
+                <input type="checkbox" id="showLabels" checked>
+            </div>
+        </div>
+
+        <div class="search-container">
+            <input type="text" class="search-input" id="countrySearch" placeholder="Search countries...">
+            <div class="search-results" id="searchResults"></div>
+        </div>
+        
+        <div id="globe-container"></div>
+    </div>
+
+    <!-- Country Information Modal -->
+    <div id="countryModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalCountryName">Country Name</h2>
+                <span class="close">&times;</span>
+            </div>
+            <div class="country-info">
+                <div class="info-section">
+                    <h3>Basic Information</h3>
+                    <p><strong>Capital:</strong> <span id="modalCapital">-</span></p>
+                    <p><strong>Population:</strong> <span id="modalPopulation">-</span></p>
+                    <p><strong>Area:</strong> <span id="modalArea">-</span></p>
+                    <p><strong>Continent:</strong> <span id="modalContinent">-</span></p>
+                    <p><strong>Currency:</strong> <span id="modalCurrency">-</span></p>
+                </div>
+                <div class="info-section">
+                    <h3>States/Provinces</h3>
+                    <div id="modalStates" class="states-grid">
+                        <!-- States will be populated here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/geometries/TextGeometry.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/FontLoader.js"></script>
+    
+    <script>
+        // Country data with coordinates, capitals, and states
+        const countryData = {
+            'India': {
+                capital: 'New Delhi',
+                population: '1.4 billion',
+                area: '3.3M km²',
+                continent: 'Asia',
+                currency: 'Indian Rupee (INR)',
+                coordinates: { lat: 20.5937, lng: 78.9629 },
+                states: [
+                    'Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar', 'Chhattisgarh',
+                    'Goa', 'Gujarat', 'Haryana', 'Himachal Pradesh', 'Jharkhand',
+                    'Karnataka', 'Kerala', 'Madhya Pradesh', 'Maharashtra', 'Manipur',
+                    'Meghalaya', 'Mizoram', 'Nagaland', 'Odisha', 'Punjab',
+                    'Rajasthan', 'Sikkim', 'Tamil Nadu', 'Telangana', 'Tripura',
+                    'Uttar Pradesh', 'Uttarakhand', 'West Bengal', 'Andaman and Nicobar Islands',
+                    'Chandigarh', 'Dadra and Nagar Haveli', 'Daman and Diu', 'Delhi',
+                    'Jammu and Kashmir', 'Ladakh', 'Lakshadweep', 'Puducherry'
+                ]
+            },
+            'United States': {
+                capital: 'Washington D.C.',
+                population: '331M',
+                area: '9.8M km²',
+                continent: 'North America',
+                currency: 'US Dollar (USD)',
+                coordinates: { lat: 39.8283, lng: -98.5795 },
+                states: [
+                    'Alabama', 'Alaska', 'Arizona', 'Arkansas', 'California',
+                    'Colorado', 'Connecticut', 'Delaware', 'Florida', 'Georgia',
+                    'Hawaii', 'Idaho', 'Illinois', 'Indiana', 'Iowa',
+                    'Kansas', 'Kentucky', 'Louisiana', 'Maine', 'Maryland',
+                    'Massachusetts', 'Michigan', 'Minnesota', 'Mississippi', 'Missouri',
+                    'Montana', 'Nebraska', 'Nevada', 'New Hampshire', 'New Jersey',
+                    'New Mexico', 'New York', 'North Carolina', 'North Dakota', 'Ohio',
+                    'Oklahoma', 'Oregon', 'Pennsylvania', 'Rhode Island', 'South Carolina',
+                    'South Dakota', 'Tennessee', 'Texas', 'Utah', 'Vermont',
+                    'Virginia', 'Washington', 'West Virginia', 'Wisconsin', 'Wyoming'
+                ]
+            },
+            'China': {
+                capital: 'Beijing',
+                population: '1.4B',
+                area: '9.6M km²',
+                continent: 'Asia',
+                currency: 'Chinese Yuan (CNY)',
+                coordinates: { lat: 35.8617, lng: 104.1954 },
+                states: [
+                    'Anhui', 'Beijing', 'Chongqing', 'Fujian', 'Gansu',
+                    'Guangdong', 'Guangxi', 'Guizhou', 'Hainan', 'Hebei',
+                    'Heilongjiang', 'Henan', 'Hubei', 'Hunan', 'Inner Mongolia',
+                    'Jiangsu', 'Jiangxi', 'Jilin', 'Liaoning', 'Ningxia',
+                    'Qinghai', 'Shaanxi', 'Shandong', 'Shanghai', 'Shanxi',
+                    'Sichuan', 'Tianjin', 'Tibet', 'Xinjiang', 'Yunnan', 'Zhejiang'
+                ]
+            },
+            'Brazil': {
+                capital: 'Brasília',
+                population: '215M',
+                area: '8.5M km²',
+                continent: 'South America',
+                currency: 'Brazilian Real (BRL)',
+                coordinates: { lat: -14.2350, lng: -51.9253 },
+                states: [
+                    'Acre', 'Alagoas', 'Amapá', 'Amazonas', 'Bahia',
+                    'Ceará', 'Distrito Federal', 'Espírito Santo', 'Goiás', 'Maranhão',
+                    'Mato Grosso', 'Mato Grosso do Sul', 'Minas Gerais', 'Pará', 'Paraíba',
+                    'Paraná', 'Pernambuco', 'Piauí', 'Rio de Janeiro', 'Rio Grande do Norte',
+                    'Rio Grande do Sul', 'Rondônia', 'Roraima', 'Santa Catarina', 'São Paulo',
+                    'Sergipe', 'Tocantins'
+                ]
+            },
+            'Russia': {
+                capital: 'Moscow',
+                population: '146M',
+                area: '17.1M km²',
+                continent: 'Europe/Asia',
+                currency: 'Russian Ruble (RUB)',
+                coordinates: { lat: 61.5240, lng: 105.3188 },
+                states: [
+                    'Adygea', 'Altai', 'Bashkortostan', 'Buryatia', 'Chechnya',
+                    'Chuvashia', 'Dagestan', 'Ingushetia', 'Kabardino-Balkaria', 'Kalmykia',
+                    'Karachay-Cherkessia', 'Karelia', 'Khakassia', 'Komi', 'Mari El',
+                    'Mordovia', 'North Ossetia-Alania', 'Sakha', 'Tatarstan', 'Tuva',
+                    'Udmurtia', 'Altai Krai', 'Kamchatka Krai', 'Khabarovsk Krai', 'Krasnodar Krai',
+                    'Krasnoyarsk Krai', 'Perm Krai', 'Primorsky Krai', 'Stavropol Krai', 'Zabaykalsky Krai',
+                    'Amur Oblast', 'Arkhangelsk Oblast', 'Astrakhan Oblast', 'Belgorod Oblast', 'Bryansk Oblast',
+                    'Chelyabinsk Oblast', 'Irkutsk Oblast', 'Ivanovo Oblast', 'Kaliningrad Oblast', 'Kaluga Oblast',
+                    'Kemerovo Oblast', 'Kirov Oblast', 'Kostroma Oblast', 'Kurgan Oblast', 'Kursk Oblast',
+                    'Leningrad Oblast', 'Lipetsk Oblast', 'Magadan Oblast', 'Moscow Oblast', 'Murmansk Oblast',
+                    'Nizhny Novgorod Oblast', 'Novgorod Oblast', 'Novosibirsk Oblast', 'Omsk Oblast', 'Orenburg Oblast',
+                    'Oryol Oblast', 'Penza Oblast', 'Pskov Oblast', 'Rostov Oblast', 'Ryazan Oblast',
+                    'Sakhalin Oblast', 'Samara Oblast', 'Saratov Oblast', 'Smolensk Oblast', 'Sverdlovsk Oblast',
+                    'Tambov Oblast', 'Tomsk Oblast', 'Tula Oblast', 'Tver Oblast', 'Tyumen Oblast',
+                    'Ulyanovsk Oblast', 'Vladimir Oblast', 'Volgograd Oblast', 'Vologda Oblast', 'Voronezh Oblast',
+                    'Yaroslavl Oblast', 'Moscow', 'Saint Petersburg', 'Sevastopol'
+                ]
+            },
+            'Canada': {
+                capital: 'Ottawa',
+                population: '38M',
+                area: '10M km²',
+                continent: 'North America',
+                currency: 'Canadian Dollar (CAD)',
+                coordinates: { lat: 56.1304, lng: -106.3468 },
+                states: [
+                    'Alberta', 'British Columbia', 'Manitoba', 'New Brunswick', 'Newfoundland and Labrador',
+                    'Northwest Territories', 'Nova Scotia', 'Nunavut', 'Ontario', 'Prince Edward Island',
+                    'Quebec', 'Saskatchewan', 'Yukon'
+                ]
+            },
+            'Australia': {
+                capital: 'Canberra',
+                population: '26M',
+                area: '7.7M km²',
+                continent: 'Oceania',
+                currency: 'Australian Dollar (AUD)',
+                coordinates: { lat: -25.2744, lng: 133.7751 },
+                states: [
+                    'New South Wales', 'Queensland', 'South Australia', 'Tasmania', 'Victoria',
+                    'Western Australia', 'Australian Capital Territory', 'Northern Territory'
+                ]
+            },
+            'Germany': {
+                capital: 'Berlin',
+                population: '83M',
+                area: '357K km²',
+                continent: 'Europe',
+                currency: 'Euro (EUR)',
+                coordinates: { lat: 51.1657, lng: 10.4515 },
+                states: [
+                    'Baden-Württemberg', 'Bavaria', 'Berlin', 'Brandenburg', 'Bremen',
+                    'Hamburg', 'Hesse', 'Lower Saxony', 'Mecklenburg-Vorpommern', 'North Rhine-Westphalia',
+                    'Rhineland-Palatinate', 'Saarland', 'Saxony', 'Saxony-Anhalt', 'Schleswig-Holstein', 'Thuringia'
+                ]
+            },
+            'France': {
+                capital: 'Paris',
+                population: '67M',
+                area: '643K km²',
+                continent: 'Europe',
+                currency: 'Euro (EUR)',
+                coordinates: { lat: 46.2276, lng: 2.2137 },
+                states: [
+                    'Auvergne-Rhône-Alpes', 'Bourgogne-Franche-Comté', 'Brittany', 'Centre-Val de Loire',
+                    'Corsica', 'Grand Est', 'Hauts-de-France', 'Île-de-France', 'Normandy',
+                    'Nouvelle-Aquitaine', 'Occitanie', 'Pays de la Loire', 'Provence-Alpes-Côte d\'Azur'
+                ]
+            },
+            'Japan': {
+                capital: 'Tokyo',
+                population: '125M',
+                area: '378K km²',
+                continent: 'Asia',
+                currency: 'Japanese Yen (JPY)',
+                coordinates: { lat: 36.2048, lng: 138.2529 },
+                states: [
+                    'Hokkaido', 'Aomori', 'Iwate', 'Miyagi', 'Akita', 'Yamagata', 'Fukushima',
+                    'Ibaraki', 'Tochigi', 'Gunma', 'Saitama', 'Chiba', 'Tokyo', 'Kanagawa',
+                    'Niigata', 'Toyama', 'Ishikawa', 'Fukui', 'Yamanashi', 'Nagano',
+                    'Gifu', 'Shizuoka', 'Aichi', 'Mie', 'Shiga', 'Kyoto', 'Osaka',
+                    'Hyogo', 'Nara', 'Wakayama', 'Tottori', 'Shimane', 'Okayama',
+                    'Hiroshima', 'Yamaguchi', 'Tokushima', 'Kagawa', 'Ehime', 'Kochi',
+                    'Fukuoka', 'Saga', 'Nagasaki', 'Kumamoto', 'Oita', 'Miyazaki',
+                    'Kagoshima', 'Okinawa'
+                ]
+            }
+        };
+
+        // Create stars background
+        function createStars() {
+            const starsContainer = document.getElementById('stars');
+            const numStars = 200;
+            
+            for (let i = 0; i < numStars; i++) {
+                const star = document.createElement('div');
+                star.className = 'star';
+                star.style.left = Math.random() * 100 + '%';
+                star.style.top = Math.random() * 100 + '%';
+                star.style.width = Math.random() * 3 + 1 + 'px';
+                star.style.height = star.style.width;
+                star.style.animationDelay = Math.random() * 2 + 's';
+                star.style.animationDuration = (Math.random() * 3 + 1) + 's';
+                starsContainer.appendChild(star);
+            }
+        }
+
+        // Initialize Three.js scene
+        let scene, camera, renderer, globe, clouds, controls, raycaster, mouse;
+        let rotationSpeed = 0.005;
+        let autoRotate = true;
+        let showClouds = true;
+        let showLabels = true;
+        let countryLabels = [];
+        let font;
+
+        // Convert lat/lng to 3D coordinates
+        function latLngToVector3(lat, lng, radius = 1.02) {
+            const phi = (90 - lat) * (Math.PI / 180);
+            const theta = (lng + 180) * (Math.PI / 180);
+            
+            return new THREE.Vector3(
+                -(radius * Math.sin(phi) * Math.cos(theta)),
+                radius * Math.cos(phi),
+                radius * Math.sin(phi) * Math.sin(theta)
+            );
+        }
+
+        // Create country labels
+        function createCountryLabels() {
+            if (!font) return;
+            
+            countryLabels.forEach(label => {
+                if (label.mesh) scene.remove(label.mesh);
+            });
+            countryLabels = [];
+
+            Object.keys(countryData).forEach(countryName => {
+                const country = countryData[countryName];
+                const coords = country.coordinates;
+                const position = latLngToVector3(coords.lat, coords.lng);
+                
+                // Create text geometry
+                const textGeometry = new THREE.TextGeometry(countryName, {
+                    font: font,
+                    size: 0.05,
+                    height: 0.01,
+                    curveSegments: 12,
+                    bevelEnabled: false
+                });
+                
+                textGeometry.computeBoundingBox();
+                textGeometry.translate(-textGeometry.boundingBox.max.x * 0.5, -textGeometry.boundingBox.max.y * 0.5, 0);
+                
+                const textMaterial = new THREE.MeshBasicMaterial({ 
+                    color: 0x00d4ff,
+                    transparent: true,
+                    opacity: 0.8
+                });
+                
+                const textMesh = new THREE.Mesh(textGeometry, textMaterial);
+                textMesh.position.copy(position);
+                textMesh.lookAt(0, 0, 0);
+                textMesh.userData = { countryName: countryName, type: 'country' };
+                
+                scene.add(textMesh);
+                countryLabels.push({ mesh: textMesh, countryName: countryName });
+            });
+        }
+
+        function init() {
+            // Create scene
+            scene = new THREE.Scene();
+            
+            // Create camera
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.z = 3;
+            
+            // Create renderer
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setClearColor(0x000000, 0);
+            document.getElementById('globe-container').appendChild(renderer.domElement);
+            
+            // Add orbit controls
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            controls.enableZoom = true;
+            controls.enablePan = false;
+            controls.minDistance = 1.5;
+            controls.maxDistance = 8;
+            
+            // Initialize raycaster and mouse
+            raycaster = new THREE.Raycaster();
+            mouse = new THREE.Vector2();
+            
+            // Create Earth geometry
+            const geometry = new THREE.SphereGeometry(1, 64, 64);
+            
+            // Create Earth material with texture
+            const loader = new THREE.TextureLoader();
+            const earthTexture = loader.load('https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/planets/earth_atmos_2048.jpg');
+            const earthBump = loader.load('https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/planets/earth_normal_2048.jpg');
+            const earthSpecular = loader.load('https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/planets/earth_specular_2048.jpg');
+            
+            const earthMaterial = new THREE.MeshPhongMaterial({
+                map: earthTexture,
+                bumpMap: earthBump,
+                bumpScale: 0.1,
+                specularMap: earthSpecular,
+                shininess: 100
+            });
+            
+            // Create Earth mesh
+            globe = new THREE.Mesh(geometry, earthMaterial);
+            globe.userData = { type: 'globe' };
+            scene.add(globe);
+            
+            // Create clouds
+            const cloudGeometry = new THREE.SphereGeometry(1.01, 32, 32);
+            const cloudTexture = loader.load('https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/planets/earth_clouds_1024.png');
+            const cloudMaterial = new THREE.MeshLambertMaterial({
+                map: cloudTexture,
+                transparent: true,
+                opacity: 0.3
+            });
+            
+            clouds = new THREE.Mesh(cloudGeometry, cloudMaterial);
+            scene.add(clouds);
+            
+            // Add ambient light
+            const ambientLight = new THREE.AmbientLight(0x404040, 0.3);
+            scene.add(ambientLight);
+            
+            // Add directional light (sun)
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+            directionalLight.position.set(5, 3, 5);
+            scene.add(directionalLight);
+            
+            // Add point light for extra illumination
+            const pointLight = new THREE.PointLight(0xffffff, 0.5, 100);
+            pointLight.position.set(-5, 0, 5);
+            scene.add(pointLight);
+            
+            // Load font for text labels
+            const fontLoader = new THREE.FontLoader();
+            fontLoader.load('https://threejs.org/examples/fonts/helvetiker_regular.typeface.json', function(loadedFont) {
+                font = loadedFont;
+                createCountryLabels();
+            });
+            
+            // Add click event listener
+            renderer.domElement.addEventListener('click', onMouseClick);
+            
+            // Hide loading screen
+            document.getElementById('loading').style.display = 'none';
+            
+            // Start animation
+            animate();
+        }
+
+        // Mouse click handler for country selection
+        function onMouseClick(event) {
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+            
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(scene.children, true);
+            
+            for (let i = 0; i < intersects.length; i++) {
+                const object = intersects[i].object;
+                if (object.userData && object.userData.type === 'country') {
+                    showCountryModal(object.userData.countryName);
+                    break;
+                }
+            }
+        }
+
+        // Show country information modal
+        function showCountryModal(countryName) {
+            const country = countryData[countryName];
+            if (!country) return;
+            
+            document.getElementById('modalCountryName').textContent = countryName;
+            document.getElementById('modalCapital').textContent = country.capital;
+            document.getElementById('modalPopulation').textContent = country.population;
+            document.getElementById('modalArea').textContent = country.area;
+            document.getElementById('modalContinent').textContent = country.continent;
+            document.getElementById('modalCurrency').textContent = country.currency;
+            
+            // Populate states
+            const statesContainer = document.getElementById('modalStates');
+            statesContainer.innerHTML = '';
+            
+            country.states.forEach(state => {
+                const stateElement = document.createElement('div');
+                stateElement.className = 'state-item';
+                stateElement.textContent = state;
+                statesContainer.appendChild(stateElement);
+            });
+            
+            document.getElementById('countryModal').style.display = 'block';
+        }
+
+        // Close modal
+        function closeModal() {
+            document.getElementById('countryModal').style.display = 'none';
+        }
+
+        // Search functionality
+        function setupSearch() {
+            const searchInput = document.getElementById('countrySearch');
+            const searchResults = document.getElementById('searchResults');
+            
+            searchInput.addEventListener('input', function(e) {
+                const query = e.target.value.toLowerCase();
+                searchResults.innerHTML = '';
+                
+                if (query.length < 2) {
+                    searchResults.style.display = 'none';
+                    return;
+                }
+                
+                const matches = Object.keys(countryData).filter(country => 
+                    country.toLowerCase().includes(query) ||
+                    countryData[country].capital.toLowerCase().includes(query)
+                );
+                
+                if (matches.length > 0) {
+                    searchResults.style.display = 'block';
+                    matches.slice(0, 10).forEach(country => {
+                        const resultItem = document.createElement('div');
+                        resultItem.className = 'search-result-item';
+                        resultItem.innerHTML = `
+                            <strong>${country}</strong><br>
+                            <small>Capital: ${countryData[country].capital}</small>
+                        `;
+                        resultItem.addEventListener('click', () => {
+                            showCountryModal(country);
+                            searchInput.value = '';
+                            searchResults.style.display = 'none';
+                        });
+                        searchResults.appendChild(resultItem);
+                    });
+                } else {
+                    searchResults.style.display = 'none';
+                }
+            });
+            
+            // Hide search results when clicking outside
+            document.addEventListener('click', function(e) {
+                if (!searchInput.contains(e.target) && !searchResults.contains(e.target)) {
+                    searchResults.style.display = 'none';
+                }
+            });
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            // Rotate globe
+            if (autoRotate) {
+                globe.rotation.y += rotationSpeed;
+                if (clouds) clouds.rotation.y += rotationSpeed * 1.1;
+            }
+            
+            // Update controls
+            controls.update();
+            
+            // Render scene
+            renderer.render(scene, camera);
+        }
+
+        // Event listeners for controls
+        document.getElementById('rotationSpeed').addEventListener('input', function(e) {
+            rotationSpeed = parseFloat(e.target.value) * 0.01;
+        });
+
+        document.getElementById('zoomLevel').addEventListener('input', function(e) {
+            const zoom = parseFloat(e.target.value);
+            camera.position.z = zoom;
+        });
+
+        document.getElementById('autoRotate').addEventListener('change', function(e) {
+            autoRotate = e.target.checked;
+        });
+
+        document.getElementById('showClouds').addEventListener('change', function(e) {
+            showClouds = e.target.checked;
+            if (clouds) {
+                clouds.visible = showClouds;
+            }
+        });
+
+        document.getElementById('showLabels').addEventListener('change', function(e) {
+            showLabels = e.target.checked;
+            countryLabels.forEach(label => {
+                if (label.mesh) {
+                    label.mesh.visible = showLabels;
+                }
+            });
+        });
+
+        // Modal event listeners
+        document.querySelector('.close').addEventListener('click', closeModal);
+        document.getElementById('countryModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeModal();
+            }
+        });
+
+        // Handle window resize
+        window.addEventListener('resize', function() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // Initialize everything
+        createStars();
+        setupSearch();
+        init();
+    </script>
+</body>
+</html>

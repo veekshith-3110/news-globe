@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Interactive Globe</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="container">
+        <div class="stars" id="stars"></div>
+        
+        <!-- Language Selector -->
+        <div class="language-selector">
+            <button class="language-btn active" data-lang="en">English</button>
+            <button class="language-btn" data-lang="hi">हिन्दी</button>
+            <button class="language-btn" data-lang="te">తెలుగు</button>
+            <button class="language-btn" data-lang="ta">தமிழ்</button>
+            <button class="language-btn" data-lang="kn">ಕನ್ನಡ</button>
+        </div>
+        
+        <div class="loading" id="loading">Loading 3D Globe...</div>
+        
+        <div class="controls">
+            <h2 data-translate="globe_controls">🌍 Globe Controls</h2>
+            <div class="control-item">
+                <label data-translate="rotation_speed">Rotation Speed:</label>
+                <input type="range" id="rotationSpeed" min="0" max="2" step="0.1" value="0.5">
+            </div>
+            <div class="control-item">
+                <label data-translate="zoom_level">Zoom Level:</label>
+                <input type="range" id="zoomLevel" min="1" max="5" step="0.1" value="2">
+            </div>
+            <div class="control-item">
+                <label data-translate="auto_rotate">Auto Rotate:</label>
+                <input type="checkbox" id="autoRotate" checked>
+            </div>
+            <div class="control-item">
+                <label data-translate="show_clouds">Show Clouds:</label>
+                <input type="checkbox" id="showClouds" checked>
+            </div>
+            <div class="control-item">
+                <label data-translate="show_labels">Show Labels:</label>
+                <input type="checkbox" id="showLabels" checked>
+            </div>
+        </div>
+
+        <div class="search-container">
+            <input type="text" class="search-input" id="countrySearch" placeholder="Search countries..." data-translate-placeholder="search_countries">
+            <div class="search-results" id="searchResults"></div>
+        </div>
+        
+        <!-- Test button for debugging -->
+        <div style="position: fixed; bottom: 20px; left: 20px; z-index: 1000;">
+            <button onclick="testCountryClick()" style="background: rgba(0, 255, 136, 0.2); border: 2px solid #00ff88; color: #00ff88; padding: 10px 20px; border-radius: 25px; cursor: pointer; font-weight: 600;">
+                Test India Click
+            </button>
+        </div>
+        
+        <div id="globe-container"></div>
+        
+        <!-- Country List at Bottom -->
+        <div class="country-list-container">
+            <h3 data-translate="available_countries">🌍 Available Countries</h3>
+            <div class="country-list" id="countryList">
+                <!-- Countries will be populated here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Country Information Modal -->
+    <div id="countryModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalCountryName">Country Name</h2>
+                <span class="close">&times;</span>
+            </div>
+            <div class="country-info">
+                <div class="info-section">
+                    <h3>Basic Information</h3>
+                    <p><strong>Capital:</strong> <span id="modalCapital">-</span></p>
+                    <p><strong>Population:</strong> <span id="modalPopulation">-</span></p>
+                    <p><strong>Area:</strong> <span id="modalArea">-</span></p>
+                    <p><strong>Continent:</strong> <span id="modalContinent">-</span></p>
+                    <p><strong>Currency:</strong> <span id="modalCurrency">-</span></p>
+                </div>
+                <div class="info-section">
+                    <h3>States/Provinces</h3>
+                    <div id="modalStates" class="states-grid">
+                        <!-- States will be populated here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/geometries/TextGeometry.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/FontLoader.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
